@@ -1,6 +1,9 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
+// import {useRef,useCallback} from "react";
+import { useRef, useCallback } from "react";
 import { getThreads } from "../services/threads.service";
 import ThreadItem from "./ThreadItem.jsx";
+import { useIntersection } from "../hooks/useIntersection.js";
 
 // Cursor pagination is already wired with useInfiniteQuery and a "Load More" button.
 //
@@ -25,6 +28,14 @@ export default function ThreadList() {
     initialPageParam: undefined,
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
   });
+  const sentinelRef = useRef(null);
+  const onIntersect = useCallback(()=>{
+    if(hasNextPage && !isFetchingNextPage){
+      fetchNextPage();
+    }
+  },[hasNextPage,isFetchingNextPage,fetchNextPage]);
+  useIntersection(sentinelRef,onIntersect);
+
 
   if (isPending) return <p className="muted">Loading threads…</p>;
   if (isError) return <p className="error">Could not load threads: {error.message}</p>;
@@ -40,13 +51,11 @@ export default function ThreadList() {
       </ul>
 
       {/* TODO: replace this button with a sentinel div + useIntersection */}
-      {hasNextPage && (
-        <div className="load-more">
-          <button onClick={() => fetchNextPage()} disabled={isFetchingNextPage}>
-            {isFetchingNextPage ? "Loading more…" : "Load More"}
-          </button>
-        </div>
+      <div ref = {sentinelRef}></div>
+      {isFetchingNextPage && (
+        <p className ="loading-more">Loading more...</p>
       )}
+      
     </div>
   );
 }
